@@ -25,7 +25,7 @@ namespace AutoAppointApp
             logger = _logger;
         }
 
-        public async Task<T> Post<T>(string url, PostParamter args)
+        public async Task<RetResult<T>> Post<T>(string url, PostParamter args)
         {
             try
             {
@@ -48,7 +48,7 @@ namespace AutoAppointApp
                         logger.LogError(result.ErrorInfo);
                     }
 
-                    return result.ReturnValue;
+                    return result;
                 }
             }
             catch (Exception ex)
@@ -74,14 +74,14 @@ namespace AutoAppointApp
                 .Add("courseid", baseInfo.CourseId)
                 .Add("studydate", date);
 
-            var result = await Post<IEnumerable<CourseBlock>>(url, parameter);
+            var ret = await Post<IEnumerable<CourseBlock>>(url, parameter);
 
-            if (result == null)
+            if (ret.ReturnValue == null)
             {
-                result = new List<CourseBlock>();
+                ret.ReturnValue = new List<CourseBlock>();
             }
 
-            return result.Where(item => item.PersonCount == 0);
+            return ret.ReturnValue.Where(item => item.PersonCount == 0);
         }
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace AutoAppointApp
         /// <param name="date"></param>
         /// <param name="blockId"></param>
         /// <returns></returns>
-        public async Task AppointCourse(string date, int blockId)
+        public async Task<RetResult<string>> AppointCourse(string date, int blockId)
         {
             var url = "http://yy.masjp.cn/Home/SubmitCourseOrder";
 
@@ -103,7 +103,7 @@ namespace AutoAppointApp
                 .Add("startblockid", blockId.ToString())
                 .Add("blockcount", "1");
 
-            await Post<string>(url, parameter);
+            return await Post<string>(url, parameter);
         }
 
         /// <summary>
@@ -120,14 +120,14 @@ namespace AutoAppointApp
                 .Add("studystatusid", "0")
                 .Add("studyorderid", "");
 
-            var result = await Post<IEnumerable<MyCourse>>(url, parameter);
+            var ret = await Post<IEnumerable<MyCourse>>(url, parameter);
 
-            if (result == null)
+            if (ret.ReturnValue == null)
             {
-                result = new List<MyCourse>();
+                ret.ReturnValue = new List<MyCourse>();
             }
 
-            return result.Where(item => DateTime.Parse(item.StudyDate) == DateTime.Parse(date)).Any();
+            return ret.ReturnValue.Where(item => DateTime.Parse(item.StudyDate) == DateTime.Parse(date)).Any();
         }
 
         public async Task UpateCookie()

@@ -124,14 +124,15 @@ namespace AutoAppointApp
                     if (success)
                     {
                         logger.LogWarning("{0} 抢单成功", DateTime.Now);
-                        GrabCancelSource.Cancel(false);
-                        Interlocked.Decrement(ref _nRun);
+
+                        CancelGrab();
+
                     }
-                    else if (DateTime.Now > DateTime.Parse($"{DateTime.Now.ToString("yyyy/MM/dd")} {OpenTime}").AddMinutes(10)) // 退出抢票
+                    else if (DateTime.Now > DateTime.Parse($"{DateTime.Now.ToString("yyyy/MM/dd")} {OpenTime}").AddMinutes(3)) // 退出抢票
                     {
                         logger.LogWarning("{0} 抢单失败", DateTime.Now);
-                        GrabCancelSource.Cancel(false);
-                        Interlocked.Decrement(ref _nRun);
+
+                        CancelGrab();
                     }
                     else
                     {
@@ -175,11 +176,45 @@ namespace AutoAppointApp
                 {
                     while (!GrabCancelSource.Token.IsCancellationRequested)
                     {
-                        await courseApi.AppointCourse(date, block.BlockId);
+                        var ret = await courseApi.AppointCourse(date, block.BlockId);
+
+                        if (!string.IsNullOrEmpty(ret.ErrorInfo))
+                        {
+                            if (ret.ErrorInfo.StartsWith("时间段预约人数已满"))
+                            {
+                                logger.LogError("{0} 当前时间段不可用 [{1}]", DateTime.Now, block.BlockDescription);
+                                break;
+                            }
+
+                            if (ret.ErrorInfo.StartsWith("学员每日预约的时间段总数不能超过规定的上限"))
+                            {
+                                logger.LogError("{0} 当前时间段已预约成功 [{1}]", DateTime.Now, block.BlockDescription);
+                                break;
+                            }
+                        }
+
                     }
 
                     logger.LogWarning("{0} 退出时间段 [{1}]", DateTime.Now, block.BlockDescription);
                 });
+            }
+        }
+
+        /// <summary>
+        /// 退出抢单
+        /// </summary>
+        private void CancelGrab()
+        {
+            if (!GrabCancelSource.Token.IsCancellationRequested)
+            {
+                lock (this)
+                {
+                    if (!GrabCancelSource.Token.IsCancellationRequested)
+                    {
+                        GrabCancelSource.Cancel(false);
+                        Interlocked.Decrement(ref _nRun);
+                    }
+                }
             }
         }
 
