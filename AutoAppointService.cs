@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -59,13 +60,15 @@ namespace AutoAppointApp
         private readonly CourseApi courseApi;
         private CancellationTokenSource GrabCancelSource;
         private readonly ILogger<GrabOrder> logger;
+        private readonly IConfiguration _config;
 
         public const string OpenTime = "06:00:00";
 
-        public GrabOrder(CourseApi _courseApi, ILogger<GrabOrder> _logger)
+        public GrabOrder(CourseApi _courseApi, ILogger<GrabOrder> _logger, IConfiguration configuration)
         {
             courseApi = _courseApi;
             logger = _logger;
+            _config = configuration;
         }
 
         /// <summary>
@@ -226,21 +229,22 @@ namespace AutoAppointApp
         /// <returns></returns>
         private IEnumerable<CourseBlock> ReorderCourse(IEnumerable<CourseBlock> courses)
         {
-            var periods = new string[]
-            {
-                "8:00-8:30",
-                "8:30-9:00",
-                "9:00-9:30",
-                "9:30-10:00",
-                "10:00-10:30",
-                "10:30-11:00",
-                "14:00-14:30",
-                "14:30-15:00",
-                "15:00-15:30",
-                "15:30-16:00"
-            };
+            var periods = _config.GetSection("TimePeriods").Get<string[]>();
+            //var periods = new string[]
+            //{
+            //    "8:00-8:30",
+            //    "8:30-9:00",
+            //    "9:00-9:30",
+            //    "9:30-10:00",
+            //    "10:00-10:30",
+            //    "10:30-11:00",
+            //    "14:00-14:30",
+            //    "14:30-15:00",
+            //    "15:00-15:30",
+            //    "15:30-16:00"
+            //};
 
-            return courses.Where(item => periods.Contains(item.BlockDescription)).Reverse();
+            return courses.Where(item => periods.Contains(item.BlockDescription));
         }
     }
 }
